@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>School Hub</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #0f172a; color: white; margin: 0; }
+    .box { background: #1e293b; border: 2px solid #38bdf8; border-radius: 16px; padding: 20px; max-width: 400px; margin: 35px auto; }
+    input, select, button { width: 100%; padding: 11px; margin-top: 8px; border-radius: 10px; border: none; font-size: 15px; box-sizing: border-box; }
+    input, select { background: #0f172a; color: white; border: 1px solid #334155; }
+    button { background: #2563eb; color: white; font-weight: bold; cursor: pointer; }
+    .row { display: flex; gap: 8px; }
+    .sm { width: auto; margin: 0; padding: 6px 12px; font-size: 13px; background: #334155; }
+    #chatApp { display: none; flex-direction: column; height: 80vh; max-width: 400px; margin: 25px auto; background: #1e293b; border-radius: 18px; overflow: hidden; }
+    .top { background: #0f172a; padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; }
+    #msgList { flex: 1; padding: 12px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+    .b { max-width: 75%; padding: 9px 14px; border-radius: 16px; word-wrap: break-word; }
+    .me { align-self: flex-end; background: #2563eb; border-bottom-right-radius: 3px; }
+    .ot { align-self: flex-start; background: #334155; border-bottom-left-radius: 3px; }
+    .item { background: #dbeafe; color: #0f172a; padding: 8px 12px; border-radius: 8px; margin-top: 8px; display: flex; justify-content: space-between; align-items: center; font-weight: bold; }
+    #disScr { display: none; min-height: 100vh; background: #7c93f5; color: #0f172a; }
+    .b-row { display: flex; border-bottom: 3px solid #1e293b; font-size: 28px; font-weight: bold; }
+    .left { width: 28%; padding: 14px; border-right: 4px solid #1e293b; }
+    .right { width: 72%; padding: 14px; background: #dbeafe; display: flex; justify-content: space-between; }
+  </style>
+</head>
+<body>
+
+  <div id="home" class="box">
+    <h2 style="margin-top:0; text-align:center; color:#38bdf8;">🏫 School Hub</h2>
+    <input id="nickIn" placeholder="Your Name" />
+    <input id="roomIn" placeholder="Room Code (e.g. room1)" />
+    <button style="padding:14px;" onclick="enter('chatApp')">💬 Messages</button>
+    <button style="padding:14px; background:#7c93f5; color:#0f172a;" onclick="enter('dTyp')">📱 Dismissal Typer</button>
+    <button style="padding:14px; background:#10b981; color:#0f172a;" onclick="enter('disScr')">📺 Dismissal Screen</button>
+  </div>
+
+  <div id="chatApp">
+    <div class="top"><b id="ct">Chat</b><button class="sm" onclick="location.reload()">Home</button></div>
+    <div id="msgList"></div>
+    <div class="row" style="padding:10px; background:#0f172a;">
+      <input id="ci" style="margin:0; border-radius:99px;" placeholder="Message..." onkeydown="if(event.key==='Enter') sendChat()" />
+      <button style="width:auto; margin:0; border-radius:99px; padding:10px 16px;" onclick="sendChat()">Send</button>
+    </div>
+  </div>
+
+  <div id="dTyp" class="box" style="display:none; border-color:#7c93f5;">
+    <div class="row" style="justify-content:space-between;"><b id="dt">Typer</b><button class="sm" onclick="location.reload()">Home</button></div>
+    <div class="row">
+      <input id="sn" placeholder="Student Name(s)" onkeydown="if(event.key==='Enter') addS()" />
+      <button style="width:auto; background:#7c93f5; color:#0f172a;" onclick="sn.value+=' & '; sn.focus()">+ &</button>
+    </div>
+    <div class="row">
+      <select id="sg"><option>K</option><option>1</option><option>2</option><option>3</option><option>4</option><option selected>5</option><option>6</option></select>
+      <select id="sz"><option>🚗 Front Car</option><option>🚙 Back Car</option><option>🚌 Bus</option><option>🚶 Walker</option></select>
+    </div>
+    <button onclick="addS()">Send</button>
+    <button style="background:#475569;" onclick="clearS()">Clear All</button>
+    <div id="sList"></div>
+  </div>
+
+  <div id="disScr">
+    <div class="top">
+      <b id="ds">Screen</b>
+      <div class="row">
+        <select id="sf" onchange="drawD()" style="width:auto; margin:0; padding:6px;"><option value="ALL">All Grades</option><option>K</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select>
+        <button class="sm" onclick="location.reload()">Home</button>
+      </div>
+    </div>
+    <div id="sBrd"></div>
+  </div>
+
+  <script>
+    // PASTE YOUR FIREBASE DATABASE URL BELOW (No slash at the end)
+    const DB_URL = "https://school-hub-8354b-default-rtdb.firebaseio.com";
+
+    const myId = Math.random().toString(36).slice(2);
+    let uName = '', room = '', mode = '', students = [], lastMsgCount = 0;
+
+    function enter(m) {
+      if (DB_URL.includes("PASTE_YOUR")) return alert("Paste your Firebase URL in the code first!");
+      uName = nickIn.value.trim() || 'User';
+      room = roomIn.value.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '');
+      if (!room) return alert('Enter a Room Code!');
+      mode = m;
+      home.style.display = 'none';
+      document.getElementById(m).style.display = (m === 'chatApp') ? 'flex' : 'block';
+      ct.innerText = dt.innerText = ds.innerText = 'Room: ' + room;
+      setInterval(syncFirebase, 1200);
+      syncFirebase();
+    }
+
+    async function syncFirebase() {
+      try {
+        const res = await fetch(`${DB_URL}/rooms/${room}.json`);
+        const data = await res.json();
+        if (!data) return;
+
+        // Update Chat Bubbles
+        const msgs = data.msgs ? Object.values(data.msgs) : [];
+        if (msgs.length !== lastMsgCount) {
+          lastMsgCount = msgs.length;
+          msgList.innerHTML = msgs.map(m => `<div class="b ${m.uid === myId ? 'me' : 'ot'}"><small style="opacity:0.7"><b>${m.uid === myId ? 'You' : m.u}</b></small><br>${m.txt}</div>`).join('');
+          msgList.scrollTop = msgList.scrollHeight;
+        }
+
+        // Update Dismissal List
+        const nextList = data.students ? Object.entries(data.students).map(([key, val]) => ({ key, ...val })).reverse() : [];
+        if (mode === 'disScr' && nextList.length > students.length && nextList.at(0)) {
+          const newest = nextList.at(0);
+          if (sf.value === 'ALL' || sf.value === newest.grade) {
+            speechSynthesis.speak(new SpeechSynthesisUtterance(newest.name));
+          }
+        }
+        students = nextList;
+        drawD();
+      } catch (e) {}
+    }
+
+    async function sendChat() {
+      const txt = ci.value.trim();
+      if (!txt) return;
+      ci.value = '';
+      await fetch(`${DB_URL}/rooms/${room}/msgs.json`, {
+        method: 'POST',
+        body: JSON.stringify({ uid: myId, u: uName, txt })
+      });
+      syncFirebase();
+    }
+
+    async function addS() {
+      const name = sn.value.trim();
+      if (!name) return;
+      sn.value = '';
+      await fetch(`${DB_URL}/rooms/${room}/students.json`, {
+        method: 'POST',
+        body: JSON.stringify({ name, grade: sg.value, zone: sz.value })
+      });
+      syncFirebase();
+    }
+
+    async function delS(key) {
+      await fetch(`${DB_URL}/rooms/${room}/students/${key}.json`, { method: 'DELETE' });
+      syncFirebase();
+    }
+
+    async function clearS() {
+      await fetch(`${DB_URL}/rooms/${room}/students.json`, { method: 'DELETE' });
+      syncFirebase();
+    }
+
+    function drawD() {
+      sList.innerHTML = students.map(s => `<div class="item"><span>${s.name}</span><button class="sm" style="background:#ef4444; color:white;" onclick="delS('${s.key}')">Done</button></div>`).join('');
+      sBrd.innerHTML = students.filter(s => sf.value === 'ALL' || s.grade === sf.value)
+        .map(s => `<div class="b-row"><div class="left">${s.name.includes('&') ? 'Siblings' : 'Grade ' + s.grade}</div><div class="right"><span>${s.name}</span><span>${s.zone}</span></div></div>`).join('');
+    }
+  </script>
+</body>
+</html>
