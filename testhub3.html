@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>School Hub</title>
+  <style>
+    body{font-family:Arial;background:#0f172a;color:#fff;margin:0}
+    .box{background:#1e293b;border:2px solid #38bdf8;border-radius:16px;padding:16px;max-width:410px;margin:20px auto}
+    input,select,button{width:100%;padding:10px;margin-top:8px;border-radius:10px;border:none;font-size:15px;box-sizing:border-box}
+    input,select{background:#0f172a;color:#fff;border:1px solid #334155}
+    button{background:#2563eb;color:#fff;font-weight:bold;cursor:pointer}
+    .row{display:flex;gap:6px}.sm{width:auto;margin:0;padding:6px 10px;font-size:12px;background:#334155}
+    #ban{display:none;background:#facc15;color:#0f172a;text-align:center;padding:8px;font-weight:bold}
+    #lockOverlay{display:none;position:fixed;inset:0;background:#0f172a;z-index:99;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:20px}
+    #chatApp{display:none;flex-direction:column;height:82vh;max-width:410px;margin:20px auto;background:#1e293b;border-radius:16px;overflow:hidden}
+    .top{background:#0f172a;padding:10px 14px;display:flex;justify-content:space-between;align-items:center}
+    #msgList{flex:1;padding:10px;overflow-y:auto;display:flex;flex-direction:column;gap:8px}
+    .b{max-width:75%;padding:8px 13px;border-radius:16px;word-wrap:break-word}.me{align-self:flex-end;background:#2563eb}.ot{align-self:flex-start;background:#334155}
+    #typInd{font-size:12px;color:#38bdf8;padding:2px 14px;min-height:16px;font-style:italic}
+    .emo{display:flex;justify-content:space-around;padding:5px;background:#0f172a}.emo button{width:auto;margin:0;padding:3px 9px;background:#1e293b;border-radius:99px}
+    .item{background:#dbeafe;color:#0f172a;padding:8px 12px;border-radius:8px;margin-top:8px;display:flex;justify-content:space-between;font-weight:bold}
+    #disScr{display:none;min-height:100vh;background:#7c93f5;color:#0f172a}
+    .b-row{display:flex;border-bottom:3px solid #1e293b;font-size:26px;font-weight:bold}.left{width:28%;padding:12px;border-right:4px solid #1e293b}.right{width:72%;padding:12px;background:#dbeafe;display:flex;justify-content:space-between}
+    .acard{background:#0f172a;padding:8px;border-radius:8px;margin-top:6px;font-size:13px}
+    .sec-lbl{margin:12px 0 4px;font-size:13px;font-weight:bold;color:#38bdf8;display:block}
+  </style>
+</head>
+<body>
+  <div id="ban"></div>
+  <div id="lockOverlay"><h1 style="color:#f59e0b">🛠️ Hub Locked by Admin</h1><p style="color:#94a3b8">Please check back in a moment.</p><button class="sm" style="margin-top:16px" onclick="lockOverlay.style.display='none';authBox.style.display='none';adm.style.display='block'">🛡️ Admin Override</button></div>
+  <div id="authBox" class="box"><h2 style="margin:0;text-align:center;color:#38bdf8">🏫 School Hub</h2><input id="au" placeholder="Username"><input id="ap" type="password" placeholder="Password" onkeydown="if(event.key==='Enter')auth('login')"><div class="row"><button onclick="auth('login')">Log In</button><button style="background:#10b981;color:#0f172a" onclick="auth('signup')">Sign Up</button></div><div style="text-align:center;margin-top:10px;font-size:12px;color:#64748b;cursor:pointer" onclick="authBox.style.display='none';adm.style.display='block'">🛡️ Admin</div></div>
+  <div id="home" class="box" style="display:none"><div class="row" style="justify-content:space-between"><b style="color:#38bdf8">👤 <span id="uTag"></span></b><button class="sm" onclick="sessionStorage.clear();location.reload()">Log Out</button></div><input id="rm" placeholder="Room Code"><input id="pw" type="password" placeholder="Room Password (Optional)"><button onclick="enter('chatApp')">💬 Messages</button><button style="background:#7c93f5;color:#0f172a" onclick="enter('dTyp')">📱 Typer</button><button style="background:#10b981;color:#0f172a" onclick="enter('disScr')">📺 Screen</button></div>
+  <div id="adm" class="box" style="display:none;border-color:#f59e0b"><div class="row" style="justify-content:space-between"><b style="color:#f59e0b">🛡️ Master Admin</b><div class="row"><button class="sm" onclick="unlock()">🔄</button><button class="sm" onclick="location.reload()">Exit</button></div></div><div id="aLog"><input id="apw" type="password" placeholder="Admin Password" onkeydown="if(event.key==='Enter')unlock()"><button style="background:#f59e0b;color:#0f172a" onclick="unlock()">Unlock</button></div><div id="aBody" style="display:none"><div class="row"><button id="lockBtn" style="background:#6366f1" onclick="toggleLock()">🔒 Lock Hub</button><button style="background:#d97706" onclick="api('bell','PUT',Date.now())">🔔 Ring Bell</button><button style="background:#dc2626" onclick="del('rooms')">⚠️ Wipe</button></div><input id="bc" placeholder="Global Alert..."><div class="row"><button style="background:#f59e0b;color:#0f172a" onclick="setBc()">📢 Send</button><button class="sm" onclick="setBc('🌧️ Rainy Day Dismissal')">🌧️</button><button class="sm" onclick="setBc('🚌 All Buses Arrived')">🚌</button><button class="sm" style="background:#475569" onclick="del('alert')">Off</button></div><div class="row"><input id="badIn" placeholder="Banned words (comma separated)"><button style="width:auto;background:#475569" onclick="saveBad()">Save</button></div><div id="peekBox" class="acard" style="display:none;border:1px solid #38bdf8"></div><div id="aList"></div></div></div>
+  <div id="chatApp"><div class="top"><b id="ct">Chat</b><button class="sm" onclick="reset()">Home</button></div><div id="msgList"></div><div id="typInd"></div><div class="emo"><button onclick="postM('👍')">👍</button><button onclick="postM('😂')">😂</button><button onclick="postM('❤️')">❤️</button><button onclick="postM('👋')">👋</button><button onclick="postM('🎉')">🎉</button></div><div class="row" style="padding:10px;background:#0f172a"><input id="ci" style="margin:0;border-radius:99px" placeholder="Message..." oninput="setTyping()" onkeydown="if(event.key==='Enter')postM()"><button style="width:auto;margin:0;border-radius:99px" onclick="postM()">Send</button></div></div>
+  <div id="dTyp" class="box" style="display:none;border-color:#7c93f5"><div class="row" style="justify-content:space-between"><b id="dt">Typer</b><button class="sm" onclick="reset()">Home</button></div><div class="row"><input id="tagIn" style="width:90px" placeholder="Tag #" oninput="fillTag()"><input id="sn" placeholder="Student Name(s)" onkeydown="if(event.key==='Enter')postS()"><button style="width:auto;background:#7c93f5;color:#0f172a" onclick="sn.value+=' & ';sn.focus()">+ &</button></div><div class="row"><select id="sg"><option>K</option><option>1</option><option>2</option><option>3</option><option>4</option><option selected>5</option><option>6</option></select><select id="sz"><option>🚗 Front Car</option><option>🚙 Back Car</option><option>🚌 Bus</option><option>🚶 Walker</option></select></div><div class="row"><button onclick="postS()">Send</button><button style="width:auto;background:#0284c7" onclick="saveTag()">💾 Save Tag</button></div><button style="background:#475569" onclick="del('rooms/'+room+'/students')">Clear All</button><div id="sList"></div></div>
+  <div id="disScr"><div class="top"><b id="ds">Screen</b><div class="row"><select id="sf" onchange="drawD()" style="width:auto;margin:0;padding:6px"><option value="ALL">All</option><option>K</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select><button class="sm" onclick="reset()">Home</button></div></div><div id="sBrd"></div></div>
+
+  <script>
+    const DB = "https://school-hub-8354b-default-rtdb.firebaseio.com", ADMIN = "sasaazlam123";
+    const CLEAN_DB = DB.trim().replace(/\/+$/, '');
+    let user = sessionStorage.getItem('hu') || '', room = '', mode = '', stu = [], tags = {}, badWords = [], lastM = 0, lastBell = 0, typTmr = 0, isAdmin = false, joinedAt = 0;
+    const el = (t, c, txt) => { const e = document.createElement(t); if (c) e.className = c; if (txt) e.innerText = txt; return e; };
+
+    async function api(p, m = 'GET', b) {
+      const res = await fetch(CLEAN_DB + '/' + p + '.json', { method: m, body: b !== undefined ? JSON.stringify(b) : null });
+      const data = await res.json();
+      if (!res.ok || (data && data.error)) throw new Error(data?.error || 'Database error');
+      return data;
+    }
+
+    if (user) { authBox.style.display = 'none'; home.style.display = 'block'; uTag.innerText = user; }
+    function reset() { ['chatApp', 'dTyp', 'disScr'].forEach(i => document.getElementById(i).style.display = 'none'); room = ''; mode = ''; home.style.display = 'block'; lastM = 0; stu = []; }
+
+    async function auth(t) {
+      if (!CLEAN_DB.startsWith('http')) return alert('Paste your Firebase URL first!');
+      const raw = au.value.trim(), k = raw.toLowerCase().replace(/[^a-z0-9_-]/g, ''), p = ap.value.trim();
+      if (!k || !p) return alert('Enter user & pass!');
+      try {
+        const ex = await api('users/' + k);
+        if (t === 'signup') { if (ex) return alert('Taken!'); await api('users/' + k, 'PUT', { name: raw, pass: p }); user = raw; }
+        else { if (!ex || ex.pass !== p) return alert('Wrong login!'); user = ex.name; }
+        sessionStorage.setItem('hu', user); authBox.style.display = 'none'; home.style.display = 'block'; uTag.innerText = user;
+      } catch (e) { alert('Error: ' + e.message); }
+    }
+
+    function beep(c) { try { const x = new (window.AudioContext || window.webkitAudioContext)(), o = x.createOscillator(), g = x.createGain(); o.frequency.setValueAtTime(c ? 523 : 660, x.currentTime); if (c) o.frequency.setValueAtTime(659, x.currentTime + .15); g.gain.exponentialRampToValueAtTime(.001, x.currentTime + (c ? .45 : .12)); o.connect(g); g.connect(x.destination); o.start(); o.stop(x.currentTime + (c ? .45 : .12)); } catch (e) {} }
+
+    async function unlock() {
+      if (apw.value.trim() !== ADMIN) return alert('Wrong Password');
+      isAdmin = true; aLog.style.display = 'none'; aBody.style.display = 'block'; aList.innerHTML = ''; peekBox.style.display = 'none';
+      const d = await api(''), r = d?.rooms || {}, u = d?.users || {}, on = d?.online || {}, tg = d?.tags || {};
+      lockBtn.innerText = d?.locked ? '🔓 Unlock Hub' : '🔒 Lock Hub'; lockBtn.style.background = d?.locked ? '#10b981' : '#6366f1';
+      badIn.value = (d?.badWords || []).join(', ');
+
+      const live = Object.entries(on).filter(([, v]) => Date.now() - v.t < 8000);
+      aList.append(el('span', 'sec-lbl', '🟢 Online Now (' + live.length + ')'));
+      live.forEach(([k, v]) => aList.append(el('div', 'acard', '🟢 ' + k + ' — ' + (v.loc || 'Home'))));
+
+      aList.append(el('span', 'sec-lbl', '🚪 Rooms (' + Object.keys(r).length + ')'));
+      Object.entries(r).forEach(([k, v]) => {
+        const c = el('div', 'acard'), row = el('div', 'row'); row.style.marginTop = '5px';
+        c.append(el('b', '', k + ' ' + (v.password ? '🔒 ' + v.password : '🔓') + (v.muted ? ' [MUTED]' : '')), row);
+        [['Peek', '#0ea5e9', () => peekRoom(k, v)], ['Chat', '#0284c7', () => del('rooms/' + k + '/msgs')], [v.muted ? 'Unmute' : 'Mute', '#d97706', () => toggleMute(k, !v.muted)], ['Kick', '#7c3aed', () => kickRoom(k)], ['Del', '#ef4444', () => del('rooms/' + k)]].forEach(([lbl, bg, fn]) => {
+          const b = el('button', 'sm', lbl); b.style.background = bg; b.onclick = fn; row.append(b);
+        });
+        aList.append(c);
+      });
+
+      aList.append(el('span', 'sec-lbl', '👤 Accounts (' + Object.keys(u).length + ')'));
+      Object.entries(u).forEach(([k, v]) => {
+        const c = el('div', 'acard'), b = el('button', 'sm', 'Ban'); c.style.display = 'flex'; c.style.justifyContent = 'space-between';
+        b.style.background = '#ef4444'; b.onclick = () => del('users/' + k);
+        c.append(el('span', '', '👤 ' + v.name + ' (' + v.pass + ')'), b); aList.append(c);
+      });
+
+      aList.append(el('span', 'sec-lbl', '🏷️ Saved Car Tags (' + Object.keys(tg).length + ')'));
+      Object.entries(tg).forEach(([k, v]) => {
+        const c = el('div', 'acard'), b = el('button', 'sm', 'Del'); c.style.display = 'flex'; c.style.justifyContent = 'space-between';
+        b.style.background = '#ef4444'; b.onclick = () => del('tags/' + k);
+        c.append(el('span', '', '#' + k + ': ' + v.name + ' (' + v.grade + ')'), b); aList.append(c);
+      });
+    }
+    function peekRoom(k, v) {
+      peekBox.style.display = 'block'; peekBox.innerHTML = '';
+      const msgs = v.msgs ? Object.values(v.msgs).slice(-8) : [];
+      peekBox.append(el('b', '', '👁️ Peeking: ' + k + ' (Last ' + msgs.length + ' msgs)'));
+      msgs.forEach(m => peekBox.append(el('div', '', m.u + ': ' + m.txt)));
+    }
+
+    async function saveBad() { const list = badIn.value.split(',').map(w => w.trim().toLowerCase()).filter(Boolean); await api('badWords', 'PUT', list); alert('Word filter saved!'); }
+    async function toggleLock() { const cur = await api('locked'); await api('locked', 'PUT', !cur); await unlock(); sync(); }
+    async function toggleMute(r, state) { await api('rooms/' + r + '/muted', 'PUT', state); unlock(); }
+    async function kickRoom(r) { await api('rooms/' + r + '/kicked', 'PUT', Date.now()); alert('Kicked everyone from ' + r); }
+    async function setBc(preset) { const t = preset || bc.value.trim(); if (!t) return alert('Type an announcement first!'); await api('alert', 'PUT', t); bc.value = ''; sync(); }
+    async function del(p) { await api(p, 'DELETE'); isAdmin ? unlock() : sync(); sync(); }
+
+    async function enter(m) {
+      room = rm.value.trim().toLowerCase().replace(/[^a-z0-9_-]/g, ''); const p = pw.value.trim();
+      if (!room) return alert('Enter Room!');
+      const cur = await api('rooms/' + room);
+      if (cur?.password && cur.password !== p) return alert('🔒 Wrong Room Password!');
+      if (!cur?.password && p) await api('rooms/' + room + '/password', 'PUT', p);
+      mode = m; joinedAt = Date.now(); home.style.display = 'none'; document.getElementById(m).style.display = m === 'chatApp' ? 'flex' : 'block';
+      ct.innerText = dt.innerText = ds.innerText = (p ? '🔒 ' : '') + 'Room: ' + room;
+      sync();
+    }
+
+    function setTyping() { if (room && Date.now() - typTmr >= 2000) { typTmr = Date.now(); api('rooms/' + room + '/typing', 'PUT', { u: user, t: Date.now() }); } }
+    async function saveTag() { const id = tagIn.value.trim(), name = sn.value.trim(); if (!id || !name) return alert('Enter Tag # and Name!'); await api('tags/' + id, 'PUT', { name, grade: sg.value, zone: sz.value }); alert('Saved Tag #' + id); }
+    function fillTag() { const t = tags[tagIn.value.trim()]; if (t) { sn.value = t.name; sg.value = t.grade; sz.value = t.zone; } }
+
+    async function sync() {
+      if (!CLEAN_DB.startsWith('http')) return;
+      try {
+        if (user) api('online/' + user, 'PUT', { t: Date.now(), loc: room ? room + ' (' + mode + ')' : 'Home' });
+        const root = await api('');
+        if (root?.locked && !isAdmin) { lockOverlay.style.display = 'flex'; return; }
+        lockOverlay.style.display = 'none';
+        if (root?.bell && root.bell > lastBell) { if (lastBell > 0) beep(true); lastBell = root.bell; }
+        ban.style.display = root?.alert ? 'block' : 'none'; if (root?.alert) ban.innerText = '📢 ' + root.alert;
+        tags = root?.tags || {}; badWords = root?.badWords || [];
+
+        if (!room) return;
+        const d = root?.rooms?.[room];
+        if (!d) { msgList.innerHTML = ''; stu = []; drawD(); return; }
+        if (d.kicked && d.kicked > joinedAt) { alert('You were removed from the room by Admin.'); location.reload(); return; }
+
+        ci.disabled = !!d.muted; ci.placeholder = d.muted ? '🔇 Chat muted by Admin' : 'Message...';
+        const tp = d.typing; typInd.innerText = (tp && tp.u !== user && Date.now() - tp.t < 3000) ? tp.u + ' is typing...' : '';
+
+        const msgs = d.msgs ? Object.values(d.msgs) : [];
+        if (msgs.length !== lastM) {
+          if (lastM > 0 && msgs.at(-1)?.u !== user) beep(false);
+          lastM = msgs.length; msgList.innerHTML = '';
+          msgs.forEach(m => {
+            const b = el('div', 'b ' + (m.u === user ? 'me' : 'ot')), s = el('small', '', m.u === user ? 'You' : m.u);
+            s.style.opacity = '.7'; s.style.display = 'block'; b.append(s, document.createTextNode(m.txt)); msgList.append(b);
+          });
+          msgList.scrollTop = msgList.scrollHeight;
+        }
+        const next = d.students ? Object.entries(d.students).map(([k, v]) => ({ k, ...v })).reverse() : [];
+        if (mode === 'disScr' && next.length > stu.length && next.at(0) && (sf.value === 'ALL' || sf.value === next.at(0).grade)) {
+          beep(true); setTimeout(() => speechSynthesis.speak(new SpeechSynthesisUtterance(next.at(0).name)), 450);
+        }
+        stu = next; drawD();
+      } catch (e) {}
+    }
+
+    async function postM(e) {
+      if (ci.disabled) return;
+      const t = e || ci.value.trim(); if (!t) return;
+      if (badWords.some(w => t.toLowerCase().includes(w))) return alert('⚠️ Message blocked by word filter!');
+      if (!e) ci.value = '';
+      await api('rooms/' + room + '/msgs', 'POST', { u: user, txt: t }); sync();
+    }
+    async function postS() { if (sn.value.trim()) { const n = sn.value.trim(); sn.value = ''; tagIn.value = ''; await api('rooms/' + room + '/students', 'POST', { name: n, grade: sg.value, zone: sz.value }); sync(); } }
+
+    function drawD() {
+      sList.innerHTML = ''; sBrd.innerHTML = '';
+      stu.forEach(s => {
+        const it = el('div', 'item'), b = el('button', 'sm', 'Done'); b.style.background = '#ef4444'; b.style.color = '#fff';
+        b.onclick = () => del('rooms/' + room + '/students/' + s.k); it.append(el('span', '', s.name), b); sList.append(it);
+      });
+      stu.filter(s => sf.value === 'ALL' || s.grade === sf.value).forEach(s => {
+        const r = el('div', 'b-row'), rt = el('div', 'right');
+        rt.append(el('span', '', s.name), el('span', '', s.zone));
+        r.append(el('div', 'left', s.name.includes('&') ? 'Siblings' : 'Grade ' + s.grade), rt); sBrd.append(r);
+      });
+    }
+
+    setInterval(sync, 1200);
+    sync();
+  </script>
+</body>
+</html>
+
+
